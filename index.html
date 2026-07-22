@@ -503,7 +503,7 @@
           </div>
           <div>
             <label for="fHours">활동 시간</label>
-            <input id="fHours" type="number" min="0" step="0.5" placeholder="예: 2">
+            <input id="fHours" type="text" inputmode="numeric" placeholder="예: 2:30">
           </div>
         </div>
 
@@ -603,6 +603,32 @@ let photoDataUrl = null;
 
 const $ = id => document.getElementById(id);
 const todayStr = () => new Date().toISOString().slice(0,10);
+
+/* "2:30" 같은 시:분 표기를 소수로, 소수를 다시 "2시간 30분" 표기로 변환 */
+function parseHoursInput(str){
+  if(!str) return NaN;
+  str = str.trim();
+  if(str.includes(':')){
+    const [h, m] = str.split(':');
+    const hh = parseInt(h, 10);
+    const mm = parseInt(m, 10);
+    if(isNaN(hh) || isNaN(mm) || mm < 0 || mm > 59) return NaN;
+    return hh + mm / 60;
+  }
+  return parseFloat(str);
+}
+function formatHoursDisplay(decimal){
+  const h = Math.floor(decimal + 1e-9);
+  const m = Math.round((decimal - h) * 60);
+  if(m === 0) return `${h}시간`;
+  return `${h}시간 ${m}분`;
+}
+function formatHoursCompact(decimal){
+  const h = Math.floor(decimal + 1e-9);
+  const m = Math.round((decimal - h) * 60);
+  if(m === 0) return `${h}`;
+  return `${h}:${String(m).padStart(2,'0')}`;
+}
 
 /* ---------------- AUTH ---------------- */
 async function loadProfileList(){
@@ -767,7 +793,7 @@ function render(){
   const totalHours = entries.reduce((s,e) => s + Number(e.hours || 0), 0);
   const months = new Set(entries.map(e => e.date.slice(0,7)));
 
-  $('statHours').textContent = totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1);
+  $('statHours').textContent = formatHoursCompact(totalHours);
   $('statCount').textContent = entries.length;
   $('statMonths').textContent = months.size;
   $('entriesCount').textContent = entries.length ? `${entries.length}건` : '';
@@ -791,7 +817,7 @@ function render(){
             <p class="entry-title">${escapeHtml(entry.title || '제목 없음')}<span class="entry-weather">${entry.weather || ''}</span></p>
             <p class="entry-meta">${fmtDate(entry.date)}</p>
           </div>
-          <span class="entry-hours">${entry.hours}시간</span>
+          <span class="entry-hours">${formatHoursDisplay(entry.hours)}</span>
         </div>
         ${entry.review ? `<p class="entry-review">${escapeHtml(entry.review)}</p>` : ''}
         <div class="entry-actions"><button class="del" data-id="${entry.id}">삭제</button></div>
@@ -861,7 +887,7 @@ function renderClover(){
 $('submitBtn').onclick = async () => {
   const title = $('fTitle').value.trim();
   const date = $('fDate').value || todayStr();
-  const hours = parseFloat($('fHours').value);
+  const hours = parseHoursInput($('fHours').value);
   const review = $('fReview').value.trim();
 
   if(!title){ $('fTitle').focus(); return; }
@@ -961,7 +987,7 @@ function renderFeed(all){
               <p class="entry-title">${escapeHtml(entry.title || '제목 없음')}<span class="entry-weather">${entry.weather || ''}</span></p>
               <p class="entry-meta">${fmtDate(entry.date)}</p>
             </div>
-            <span class="entry-hours">${entry.hours}시간</span>
+            <span class="entry-hours">${formatHoursDisplay(entry.hours)}</span>
           </div>
           ${entry.review ? `<p class="entry-review">${escapeHtml(entry.review)}</p>` : ''}
         </div>
