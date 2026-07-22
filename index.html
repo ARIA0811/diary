@@ -113,7 +113,8 @@
   /* ---------------- APP ---------------- */
   #appScreen{ display:none; }
   .wrap{ max-width:720px; margin:0 auto; padding:32px 18px 90px; }
-  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:8px; flex-wrap:wrap; }
+  .topbar-actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .topbar .who{ font-size:13px; color:var(--ink-soft); }
   .topbar .who b{ color:var(--sky-deep); font-family:'Jua',sans-serif; font-size:16px; }
   .logout-btn{ background:none; border:1.5px solid var(--line); border-radius:999px; padding:6px 14px; font-size:12px; color:var(--ink-soft); }
@@ -359,6 +360,8 @@
   .empty b{ display:block; font-family:'Jua',sans-serif; font-size:17px; color:var(--sky-deep); margin-bottom:4px; }
   .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:26px; text-align:center; line-height:1.6; }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -444,7 +447,10 @@
   <div class="wrap">
     <div class="topbar">
       <div class="who">이름 <b id="whoName"></b></div>
-      <button class="logout-btn" id="logoutBtn">다른 분으로 열기</button>
+      <div class="topbar-actions">
+        <button class="logout-btn" id="resetBtn" type="button">🗑️ 내 기록 초기화</button>
+        <button class="logout-btn" id="logoutBtn">다른 분으로 열기</button>
+      </div>
     </div>
     <h1 class="title">나의 봉사 그림일기</h1>
     <p class="sub">오늘의 활동과 소감을 사진과 함께 남겨보세요. 일기를 쓸 때마다 네잎클로버 잎이 하나씩 자라나요.</p>
@@ -523,7 +529,7 @@
     </div>
 
     <div id="missionView" style="display:none;">
-      <p class="sub" style="margin-top:0;">미션에 도전해보시고, 사진으로 인증해보세요. 인증하시면 다음 미션이 이어져요.</p>
+      <p class="sub" style="margin-top:0;">다음 회차 전까지 복습 미션이 열려요. 사진으로 인증해보세요.</p>
       <div id="missionCurrent"></div>
       <div class="entries-head">
         <h2>완료한 미션</h2>
@@ -542,6 +548,52 @@
   </div>
   </div>
 
+<script>
+/* ============================================================
+   Firebase 설정 — 아래 5줄을 본인의 Firebase 프로젝트 설정으로 교체하세요.
+   Firebase 콘솔 > 프로젝트 설정 > 일반 > 내 앱 > SDK 설정 및 구성 에서 복사합니다.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBEQgvg_iJINhiT0U7LiCT_L7TYZ0pKE54",
+  authDomain: "diary-b485c.firebaseapp.com",
+  projectId: "diary-b485c",
+  storageBucket: "diary-b485c.firebasestorage.app",
+  messagingSenderId: "200110208867",
+  appId: "1:200110208867:web:9ec101eaf4eeae3e8a8556"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _db = firebase.firestore();
+
+/* window.storage와 동일한 모양(get/set/delete)으로 동작하는
+   Firestore 기반 저장소. 앱의 나머지 코드는 전혀 수정할 필요가 없어요. */
+window.storage = {
+  async get(key, shared){
+    try{
+      const snap = await _db.collection('kv').doc(key).get();
+      if(!snap.exists) return null;
+      return { key, value: snap.data().value, shared: !!shared };
+    }catch(e){
+      console.error('storage.get 실패:', key, e);
+      return null;
+    }
+  },
+  async set(key, value, shared){
+    await _db.collection('kv').doc(key).set({ value });
+    return { key, value, shared: !!shared };
+  },
+  async delete(key, shared){
+    await _db.collection('kv').doc(key).delete();
+    return { key, deleted: true, shared: !!shared };
+  },
+  async list(prefix, shared){
+    const snap = await _db.collection('kv').get();
+    const keys = [];
+    snap.forEach(d => { if(!prefix || d.id.startsWith(prefix)) keys.push(d.id); });
+    return { keys, prefix, shared: !!shared };
+  }
+};
+</script>
 <script>
 const WEATHERS = ['☀️','⛅','☁️','🌧️','❄️'];
 let currentUser = null;
@@ -593,6 +645,24 @@ $('authBtn').onclick = async () => {
   }
   currentUser = name;
   await enterApp();
+};
+
+$('resetBtn').onclick = async () => {
+  const ok = confirm('연습으로 남기신 일기와 미션 인증 기록을 모두 지우시겠어요?\n한 번 지우면 되돌릴 수 없어요.');
+  if(!ok) return;
+  try{ await window.storage.delete('diary-entries:' + currentUser, true); }catch(e){}
+  try{ await window.storage.delete('diary-mission-verify:' + currentUser, true); }catch(e){}
+  entries = [];
+  missionVerifications = {};
+  render();
+  if($('missionView').style.display !== 'none'){
+    await ensureMissions();
+    renderMissionTab();
+    loadMissionFeed();
+  }else{
+    missionLoaded = false;
+  }
+  feedLoaded = false;
 };
 
 $('logoutBtn').onclick = () => {
@@ -960,89 +1030,96 @@ async function renderComments(entryId){
   `).join('');
 }
 
-/* ---------------- MISSIONS ---------------- */
-const MISSIONS = [
-  '카카오톡으로 사진 한 장 보내보기',
-  '가족에게 영상통화 걸어보기',
-  '사진 앱에서 오늘 찍은 사진 찾아보기',
-  '카카오톡 이모티콘 하나 보내보기',
-  'QR코드로 메뉴판 열어보기',
-  '은행 앱으로 잔액 확인해보기',
-  '키오스크로 혼자 주문해보기',
-  '오늘 배운 내용을 가족에게 설명해보기',
-  '지도 앱으로 가고 싶은 곳 검색해보기',
-  '문자 메시지에 사진 첨부해서 보내보기',
-  '카카오톡 프로필 사진 바꿔보기',
-  '인터넷으로 날씨 검색해보기',
-  '유튜브에서 좋아하는 노래 찾아 들어보기',
-  '전화번호 새로 저장해보기',
-  '사진 두 손가락으로 확대해서 자세히 보기',
-  '알람 맞춰보기',
-  '다른 분이 남긴 일기에 댓글 남겨보기',
-  '오늘 배운 내용을 한 문장으로 적어보기',
-  '와이파이 연결해보기',
-  '화면 밝기 조절해보기'
+/* ---------------- MISSIONS (일정에 따라 자동으로 바뀌는 미션) ---------------- */
+const MISSION_SCHEDULE = [
+  {
+    key: 'm1',
+    start: '2026-07-22T00:00:00', end: '2026-07-31T10:30:00',
+    title: '1회차 미션',
+    text: '1회차 활동에서 함께 찍은 사진을 올려주세요!',
+  },
+  {
+    key: 'm2',
+    start: '2026-07-31T10:30:00', end: '2026-08-04T10:30:00',
+    title: '2회차 미션',
+    text: 'AI로 예쁘게 바꾼 사진을 올려주세요!',
+  },
+  {
+    key: 'm3',
+    start: '2026-08-04T10:30:00', end: '2026-08-07T10:30:00',
+    title: '3회차 미션',
+    text: '원하는 카카오톡 채널을 추가하고, 길찾기 앱으로 원하는 경로를 찾아 화면을 캡처해서 인증해주세요!',
+  },
+  {
+    key: 'm4',
+    start: '2026-08-07T10:30:00', end: null,
+    title: '4회차 미션',
+    text: '키오스크로 구매한 음료 인증 사진을 올려주세요!',
+  },
 ];
 
-let currentMissions = [];
-
-async function loadMissions(){
-  try{
-    const res = await window.storage.get('diary-missions:' + currentUser, true);
-    return res && res.value ? JSON.parse(res.value) : [];
-  }catch(e){ return []; }
-}
-async function saveMissions(list){
-  try{ await window.storage.set('diary-missions:' + currentUser, JSON.stringify(list), true); }
-  catch(e){ console.error('미션 저장 실패', e); }
-}
-function pickNewMissionText(excludeText){
-  const pool = MISSIONS.filter(m => m !== excludeText);
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-function getActiveMission(list){
-  return list.length && !list[list.length - 1].completedAt ? list[list.length - 1] : null;
-}
-
-async function ensureMissions(){
-  currentMissions = await loadMissions();
-  if(getActiveMission(currentMissions) === null){
-    const last = currentMissions.length ? currentMissions[currentMissions.length - 1].text : null;
-    currentMissions.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      text: pickNewMissionText(last),
-      assignedAt: Date.now(),
-      completedAt: null
-    });
-    await saveMissions(currentMissions);
+function getCurrentMissionItem(){
+  const now = new Date();
+  for(const item of MISSION_SCHEDULE){
+    const start = new Date(item.start);
+    const end = item.end ? new Date(item.end) : null;
+    if(now >= start && (end === null || now < end)) return item;
   }
+  // 일정 시작 전이면 첫 미션을 미리 보여줌
+  return MISSION_SCHEDULE[0];
 }
 
+async function loadMissionVerifications(){
+  try{
+    const res = await window.storage.get('diary-mission-verify:' + currentUser, true);
+    return res && res.value ? JSON.parse(res.value) : {};
+  }catch(e){ return {}; }
+}
+async function saveMissionVerifications(map){
+  try{ await window.storage.set('diary-mission-verify:' + currentUser, JSON.stringify(map), true); }
+  catch(e){ console.error('미션 인증 저장 실패', e); }
+}
+
+let missionVerifications = {};
 let missionPhotoDataUrl = null;
 
-function renderMissionTab(){
-  const active = getActiveMission(currentMissions);
-  const curEl = $('missionCurrent');
-  curEl.innerHTML = active ? `
-    <div class="mission-card">
-      <span class="mtag">진행 중인 미션</span>
-      <p class="mtext">${escapeHtml(active.text)}</p>
-      <p class="mdate">${fmtDate(new Date(active.assignedAt).toISOString().slice(0,10))}부터</p>
-      <div class="photo-box" id="missionPhotoBox">
-        <div class="photo-placeholder" id="missionPhotoPlaceholder">
-          <span class="plus">📸</span>
-          인증 사진을 눌러 추가해주세요
-        </div>
-        <img id="missionPhotoPreview" style="display:none;">
-        <button class="photo-remove" id="missionPhotoRemove" style="display:none;" type="button">✕</button>
-      </div>
-      <input type="file" id="missionPhotoInput" accept="image/*" style="display:none;">
-      <button class="submit-btn" id="missionVerifyBtn">미션 인증하기 ✅</button>
-      <p class="mission-verify-hint" id="missionVerifyHint"></p>
-    </div>
-  ` : `<div class="empty"><b>아직 미션이 없어요</b>미션 탭을 열면 새 미션이 시작돼요.</div>`;
+async function ensureMissions(){
+  missionVerifications = await loadMissionVerifications();
+}
 
-  if(active){
+function renderMissionTab(){
+  const current = getCurrentMissionItem();
+  const done = missionVerifications[current.key];
+  const curEl = $('missionCurrent');
+
+  if(done){
+    curEl.innerHTML = `
+      <div class="mission-card">
+        <span class="mtag">${escapeHtml(current.title)} · 인증 완료 ✅</span>
+        <p class="mtext">${escapeHtml(current.text)}</p>
+        <p class="mdate">${fmtDate(new Date(done.verifiedAt).toISOString().slice(0,10))}에 인증했어요</p>
+        ${done.photo ? `<img class="entry-thumb" src="${done.photo}" alt="인증 사진" style="width:120px;height:120px;margin-top:10px;">` : ''}
+      </div>
+    `;
+  }else{
+    curEl.innerHTML = `
+      <div class="mission-card">
+        <span class="mtag">${escapeHtml(current.title)}</span>
+        <p class="mtext">${escapeHtml(current.text)}</p>
+        <div class="photo-box" id="missionPhotoBox">
+          <div class="photo-placeholder" id="missionPhotoPlaceholder">
+            <span class="plus">📸</span>
+            인증 사진을 눌러 추가해주세요
+          </div>
+          <img id="missionPhotoPreview" style="display:none;">
+          <button class="photo-remove" id="missionPhotoRemove" style="display:none;" type="button">✕</button>
+        </div>
+        <input type="file" id="missionPhotoInput" accept="image/*" style="display:none;">
+        <button class="submit-btn" id="missionVerifyBtn">미션 인증하기 ✅</button>
+        <p class="mission-verify-hint" id="missionVerifyHint"></p>
+      </div>
+    `;
+
     missionPhotoDataUrl = null;
     const box = $('missionPhotoBox');
     const input = $('missionPhotoInput');
@@ -1071,42 +1148,47 @@ function renderMissionTab(){
         $('missionVerifyHint').textContent = '인증 사진을 먼저 추가해 주세요.';
         return;
       }
-      await verifyCurrentMission(missionPhotoDataUrl);
+      await verifyCurrentMission(current.key, missionPhotoDataUrl);
     };
   }
 
-  const done = currentMissions.filter(m => m.completedAt).slice().reverse();
-  $('missionCount').textContent = done.length ? `${done.length}개` : '';
+  // 지난 미션들 (일정상 현재 미션보다 앞선 것들)
+  const currentIdx = MISSION_SCHEDULE.findIndex(m => m.key === current.key);
+  const pastItems = MISSION_SCHEDULE.slice(0, currentIdx);
+  $('missionCount').textContent = pastItems.length ? `${pastItems.length}개` : '';
   const histEl = $('missionHistory');
-  if(done.length === 0){
-    histEl.innerHTML = `<div class="empty"><b>아직 완료한 미션이 없어요</b>사진으로 인증하면 미션이 하나씩 쌓여요.</div>`;
+  if(pastItems.length === 0){
+    histEl.innerHTML = `<div class="empty"><b>아직 지난 미션이 없어요</b>일정에 따라 미션이 하나씩 열려요.</div>`;
     return;
   }
-  histEl.innerHTML = done.map(m => `
-    <div class="mission-history-item">
-      ${m.photo ? `<img class="entry-thumb" src="${m.photo}" alt="인증 사진">` : `<span class="check">✅</span>`}
-      <div>
-        <div class="mh-text">${escapeHtml(m.text)}</div>
-        <div class="mh-date">${fmtDate(new Date(m.completedAt).toISOString().slice(0,10))} 인증 완료</div>
+  histEl.innerHTML = pastItems.map(item => {
+    const v = missionVerifications[item.key];
+    if(v){
+      return `
+        <div class="mission-history-item">
+          ${v.photo ? `<img class="entry-thumb" src="${v.photo}" alt="인증 사진">` : `<span class="check">✅</span>`}
+          <div>
+            <div class="mh-text">${escapeHtml(item.title)} · ${escapeHtml(item.text)}</div>
+            <div class="mh-date">${fmtDate(new Date(v.verifiedAt).toISOString().slice(0,10))} 인증 완료</div>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="mission-history-item">
+        <span class="check">⏺</span>
+        <div>
+          <div class="mh-text">${escapeHtml(item.title)} · ${escapeHtml(item.text)}</div>
+          <div class="mh-date">인증하지 않고 지나갔어요</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-async function verifyCurrentMission(photo){
-  const active = getActiveMission(currentMissions);
-  if(active){
-    active.completedAt = Date.now();
-    active.photo = photo;
-  }
-  const lastText = active ? active.text : (currentMissions.length ? currentMissions[currentMissions.length-1].text : null);
-  currentMissions.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    text: pickNewMissionText(lastText),
-    assignedAt: Date.now(),
-    completedAt: null
-  });
-  await saveMissions(currentMissions);
+async function verifyCurrentMission(key, photo){
+  missionVerifications[key] = { photo, verifiedAt: Date.now() };
+  await saveMissionVerifications(missionVerifications);
   renderMissionTab();
   loadMissionFeed();
 }
@@ -1118,12 +1200,21 @@ async function loadMissionFeed(){
     const profiles = await loadProfileList();
     const results = await Promise.all(profiles.map(async p => {
       try{
-        const res = await window.storage.get('diary-missions:' + p.nickname, true);
-        const list = res && res.value ? JSON.parse(res.value) : [];
-        return list.filter(m => m.completedAt).map(m => ({ ...m, author: p.nickname }));
+        const res = await window.storage.get('diary-mission-verify:' + p.nickname, true);
+        const map = res && res.value ? JSON.parse(res.value) : {};
+        return Object.keys(map).map(key => {
+          const scheduleItem = MISSION_SCHEDULE.find(m => m.key === key);
+          return {
+            author: p.nickname,
+            title: scheduleItem ? scheduleItem.title : '',
+            text: scheduleItem ? scheduleItem.text : '',
+            photo: map[key].photo,
+            verifiedAt: map[key].verifiedAt,
+          };
+        });
       }catch(e){ return []; }
     }));
-    const all = results.flat().sort((a,b) => (b.completedAt||0) - (a.completedAt||0));
+    const all = results.flat().sort((a,b) => (b.verifiedAt||0) - (a.verifiedAt||0));
     renderMissionFeed(all);
   }catch(e){
     el.innerHTML = `<div class="empty"><b>불러오지 못했어요</b>잠시 후 다시 시도해 주세요.</div>`;
@@ -1142,8 +1233,8 @@ function renderMissionFeed(all){
       ${m.photo ? `<img class="entry-thumb" src="${m.photo}" alt="인증 사진">` : `<span class="check">✅</span>`}
       <div>
         <div class="mh-name">${escapeHtml(m.author||'익명')}</div>
-        <div class="mh-text">${escapeHtml(m.text)}</div>
-        <div class="mh-date">${fmtDate(new Date(m.completedAt).toISOString().slice(0,10))} 인증 완료</div>
+        <div class="mh-text">${escapeHtml(m.title)} · ${escapeHtml(m.text)}</div>
+        <div class="mh-date">${fmtDate(new Date(m.verifiedAt).toISOString().slice(0,10))} 인증 완료</div>
       </div>
     </div>
   `).join('');
