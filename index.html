@@ -503,7 +503,7 @@
           </div>
           <div>
             <label for="fHours">활동 시간</label>
-            <input id="fHours" type="text" inputmode="numeric" placeholder="예: 2:30">
+            <input id="fHours" type="text" inputmode="text" placeholder="예: 2.30 또는 2시간 30분">
           </div>
         </div>
 
@@ -608,8 +608,17 @@ const todayStr = () => new Date().toISOString().slice(0,10);
 function parseHoursInput(str){
   if(!str) return NaN;
   str = str.trim();
-  if(str.includes(':')){
-    const [h, m] = str.split(':');
+  if(str.includes('시간') || str.includes('분')){
+    const hMatch = str.match(/(\d+(?:\.\d+)?)\s*시간/);
+    const mMatch = str.match(/(\d+)\s*분/);
+    if(!hMatch && !mMatch) return NaN;
+    const hh = hMatch ? parseFloat(hMatch[1]) : 0;
+    const mm = mMatch ? parseInt(mMatch[1], 10) : 0;
+    if(mm < 0 || mm > 59) return NaN;
+    return hh + mm / 60;
+  }
+  if(/[:.]/.test(str)){
+    const [h, m] = str.split(/[:.]/);
     const hh = parseInt(h, 10);
     const mm = parseInt(m, 10);
     if(isNaN(hh) || isNaN(mm) || mm < 0 || mm > 59) return NaN;
