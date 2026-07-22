@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 봉사 그림일기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FFF7F1;
+    --paper-card: #FFFFFF;
+    --line: #F2DEE7;
+    --ink: #2E4A4F;
+    --ink-soft: #7C8E8A;
+    --pink: #FFB6C6;
+    --pink-deep: #FF8FA3;
+    --sky-deep: #2E6FA3;
+    --sun: #FFCE54;
+    --leaf: #6FA84F;
+    --leaf-deep: #4F8F3B;
+    --mint: #A9DFC0;
+    --notebook-paper: #F1EBDD;
+    --notebook-rule: #B9C4D6;
+    --notebook-margin: #E0847A;
+    --danger: #E0687D;
+    --radius: 20px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Gowun Dodum', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3{ font-family:'Jua', sans-serif; font-weight:400; margin:0; }
+  button{ font-family:'Gowun Dodum', sans-serif; cursor:pointer; }
+  input{ font-family:'Gowun Dodum', sans-serif; }
+
+  /* ---------------- AUTH / COVER ---------------- */
+  #authScreen{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    overflow:hidden;
+    padding:40px 18px;
+    background-color:var(--notebook-paper);
+    background-image:
+      repeating-linear-gradient(to bottom, transparent 0px, transparent 38px, var(--notebook-rule) 38px, var(--notebook-rule) 39px),
+      radial-gradient(circle at 20% 30%, rgba(0,0,0,0.03), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(0,0,0,0.03), transparent 40%);
+  }
+  #authScreen .margin-line{
+    position:absolute; top:0; bottom:0; left:64px;
+    width:2px; background:var(--notebook-margin); opacity:0.55;
+  }
+  #authScreen .margin-line-2{ left:70px; width:1px; }
+  #authScreen .bg-svg{
+    position:absolute; inset:0; width:100%; height:100%;
+  }
+  .auth-card{
+    position:relative; z-index:2;
+    background:rgba(255,253,249,0.96);
+    backdrop-filter:blur(2px);
+    border:2.5px solid var(--ink);
+    border-radius:22px;
+    padding:0;
+    width:100%; max-width:400px;
+    box-shadow:0 18px 40px rgba(46,60,50,0.14);
+    overflow:hidden;
+  }
+  .hashtag-row{
+    display:flex; gap:8px; align-items:center;
+    padding:16px 30px 0;
+    font-family:'Jua', sans-serif;
+    font-size:13px;
+  }
+  .hashtag-row span:nth-child(1){ color:var(--pink-deep); }
+  .hashtag-row span:nth-child(2){ color:var(--leaf-deep); }
+  .hashtag-row span:nth-child(3){ color:var(--sky-deep); }
+  .hashtag-row .sun-emoji{ margin-left:auto; font-size:16px; }
+
+  .auth-inner{ padding:14px 30px 34px; }
+  .auth-inner h1{
+    font-size:25px;
+    margin-bottom:6px;
+    background:linear-gradient(100deg, var(--sky-deep), var(--leaf-deep));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    line-height:1.3;
+  }
+  .auth-sub{ font-size:13px; color:var(--ink-soft); margin-bottom:22px; line-height:1.6; }
+  .auth-field{ margin-bottom:14px; }
+  .auth-field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .auth-field input{
+    width:100%; padding:11px 13px; border:2px solid var(--line); border-radius:14px;
+    font-size:14.5px; background:#FFFBF9; color:var(--ink);
+  }
+  .auth-field input:focus{ outline:2px solid var(--mint); outline-offset:1px; }
+  .auth-btn{
+    width:100%; background:var(--sky-deep); color:#fff; border:none;
+    padding:13px; border-radius:14px; font-size:16px; font-family:'Jua',sans-serif; margin-top:6px;
+  }
+  .auth-btn:hover{ background:var(--leaf-deep); }
+  .auth-error{ font-size:12.5px; color:var(--danger); margin-top:8px; min-height:16px; }
+  .profile-chips-wrap{ margin-top:16px; }
+  .profile-chips-label{ font-size:11.5px; color:var(--ink-soft); margin-bottom:8px; }
+  .profile-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ background:#EAF5EE; border:1.5px solid var(--line); border-radius:999px; padding:5px 12px; font-size:12.5px; color:var(--ink); }
+  .chip:hover{ background:var(--sun); border-color:var(--sun); }
+
+  /* ---------------- APP ---------------- */
+  #appScreen{ display:none; }
+  .wrap{ max-width:720px; margin:0 auto; padding:32px 18px 90px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .topbar .who{ font-size:13px; color:var(--ink-soft); }
+  .topbar .who b{ color:var(--sky-deep); font-family:'Jua',sans-serif; font-size:16px; }
+  .logout-btn{ background:none; border:1.5px solid var(--line); border-radius:999px; padding:6px 14px; font-size:12px; color:var(--ink-soft); }
+  .logout-btn:hover{ border-color:var(--pink); color:var(--pink-deep); }
+
+  h1.title{ font-size:28px; margin:14px 0 4px; color:var(--sky-deep); }
+  .sub{ font-size:13.5px; color:var(--ink-soft); margin:0 0 24px; line-height:1.6; }
+
+  .tab-nav{
+    display:flex; gap:6px;
+    background:#F1EBDD;
+    border:2px solid var(--line);
+    border-radius:14px;
+    padding:4px;
+    margin-bottom:22px;
+  }
+  .tab-btn{
+    flex:1;
+    border:none; background:none;
+    padding:9px 8px;
+    border-radius:10px;
+    font-family:'Jua', sans-serif;
+    font-size:13.5px;
+    color:var(--ink-soft);
+  }
+  .tab-btn.active{ background:#fff; color:var(--sky-deep); box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+
+  .feed-entry{
+    background:var(--paper-card);
+    border:2.5px solid var(--ink);
+    border-radius:18px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .feed-entry .entry{ border:none; padding:0; margin:0; }
+  .feed-author{
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:10px;
+  }
+  .feed-author .avatar{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--sky-deep); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Jua',sans-serif; font-size:12px;
+    flex-shrink:0;
+  }
+  .feed-author .name{ font-family:'Jua',sans-serif; font-size:13.5px; color:var(--ink); }
+
+  .comments-toggle{
+    margin-top:12px;
+    background:none; border:none;
+    font-size:12px; color:var(--sky-deep);
+    text-decoration:underline; padding:0;
+  }
+  .comments-box{ margin-top:12px; border-top:1.5px dashed var(--line); padding-top:12px; display:none; }
+  .comments-box.open{ display:block; }
+  .comment-item{
+    display:flex; gap:8px; margin-bottom:8px; font-size:12.5px; line-height:1.5;
+  }
+  .comment-item .c-name{ font-family:'Jua',sans-serif; color:var(--sky-deep); flex-shrink:0; }
+  .comment-item .c-text{ color:var(--ink); }
+  .comment-empty{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
+  .comment-form{ display:flex; gap:6px; margin-top:6px; }
+  .comment-form input{
+    flex:1; font-size:12.5px; padding:7px 10px;
+    border:1.5px solid var(--line); border-radius:999px; background:#FFFBF9; color:var(--ink);
+  }
+  .comment-form input:focus{ outline:2px solid var(--mint); outline-offset:1px; }
+  .comment-form button{
+    background:var(--sky-deep); color:#fff; border:none;
+    padding:7px 14px; border-radius:999px; font-size:12px; font-family:'Jua',sans-serif; white-space:nowrap;
+  }
+  .comment-form button:hover{ background:var(--leaf-deep); }
+
+  .mission-verify-hint{
+    font-size:12px; color:var(--danger); margin-top:8px; min-height:14px;
+  }
+
+  .mission-card{
+    background:#FFF3D6;
+    border:2.5px solid var(--sun);
+    border-radius:20px;
+    padding:22px;
+    margin-bottom:22px;
+    position:relative;
+  }
+  .mission-card .mtag{
+    font-family:'Jua',sans-serif; font-size:12.5px; color:#A87418;
+    background:#fff; padding:3px 10px; border-radius:8px; display:inline-block; margin-bottom:10px;
+  }
+  .mission-card .mtext{
+    font-family:'Jua',sans-serif; font-size:19px; color:var(--ink); line-height:1.5; margin-bottom:6px;
+  }
+  .mission-card .mdate{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); }
+
+  .mission-history-item{
+    display:flex; align-items:flex-start; gap:10px;
+    background:var(--paper-card);
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    padding:12px 16px;
+    margin-bottom:10px;
+  }
+  .mission-history-item .check{
+    color:var(--leaf-deep); font-size:16px; flex-shrink:0; margin-top:1px;
+  }
+  .mission-history-item .mh-name{ font-family:'Jua',sans-serif; font-size:12px; color:var(--sky-deep); margin-bottom:2px; }
+  .mission-history-item .mh-text{ font-size:13.5px; color:var(--ink); line-height:1.5; }
+  .mission-history-item .mh-date{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); margin-top:3px; }
+
+  .top-grid{ display:grid; grid-template-columns:1fr 190px; gap:14px; margin-bottom:24px; }
+  @media (max-width:560px){ .top-grid{ grid-template-columns:1fr; } }
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:2px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .stat{ background:var(--paper-card); padding:15px 10px; text-align:center; }
+  .stat-num{ font-family:'Jua',sans-serif; font-size:24px; color:var(--sky-deep); }
+  .stat-label{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .rings-card{ background:var(--paper-card); border:2px solid var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; padding:8px; position:relative; }
+  .rings-card .cap{ position:absolute; bottom:8px; left:0; right:0; text-align:center; font-family:'IBM Plex Mono', monospace; font-size:9px; color:var(--ink-soft); }
+
+  /* diary page card */
+  .diary-card{
+    background:var(--paper-card);
+    border:3px solid var(--ink);
+    border-radius:22px;
+    margin-bottom:22px;
+    overflow:hidden;
+  }
+  .diary-header{
+    display:flex;
+    border-bottom:3px solid var(--ink);
+    background:#FFFBF7;
+  }
+  .diary-header .label-cell{
+    display:flex; align-items:center; gap:8px;
+    padding:12px 16px;
+    border-right:3px solid var(--ink);
+  }
+  .diary-header .label-cell:last-child{ border-right:none; flex:1; }
+  .diary-header .tag{
+    font-family:'Jua',sans-serif; font-size:13px; color:var(--sky-deep);
+    background:#E7F2FA; padding:3px 9px; border-radius:8px; white-space:nowrap;
+  }
+  .diary-header input[type=date]{
+    border:none; background:none; font-family:'Jua',sans-serif; font-size:15px; color:var(--ink); padding:2px;
+  }
+  .weather-picker{ display:flex; gap:4px; flex-wrap:wrap; }
+  .weather-btn{
+    background:#fff; border:2px solid var(--line); border-radius:10px;
+    font-size:17px; padding:3px 6px; line-height:1;
+  }
+  .weather-btn.on{ background:var(--sun); border-color:var(--sun); }
+
+  .diary-body{ padding:20px; }
+
+  .photo-box{
+    border:3px dashed var(--line);
+    border-radius:16px;
+    background:#FFFBF9;
+    min-height:180px;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    margin-bottom:16px;
+  }
+  .photo-box.has-photo{ border-style:solid; border-color:var(--ink); padding:10px; }
+  .photo-box img{ width:100%; max-height:280px; object-fit:cover; border-radius:10px; display:block; }
+  .photo-placeholder{ text-align:center; color:var(--ink-soft); font-size:13px; }
+  .photo-placeholder .plus{ font-size:30px; color:var(--sky-deep); display:block; margin-bottom:4px; }
+  .photo-remove{
+    position:absolute; top:14px; right:14px;
+    background:#fff; border:2px solid var(--danger); color:var(--danger);
+    border-radius:999px; width:26px; height:26px; font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #photoInput{ display:none; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .row2{ display:grid; grid-template-columns:2fr 1fr; gap:12px; }
+  .field input{
+    width:100%; font-size:14.5px; padding:10px 12px; border:2px solid var(--line);
+    border-radius:12px; background:#FFFBF9; color:var(--ink);
+  }
+  .field input:focus{ outline:2px solid var(--mint); outline-offset:1px; }
+
+  .grid-paper{
+    width:100%;
+    min-height:132px;
+    border:2px solid var(--line);
+    border-radius:12px;
+    background-color:#FFFBF9;
+    background-image:
+      linear-gradient(to right, var(--line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size:30px 30px;
+    padding:9px 10px;
+    font-size:14.5px;
+    line-height:30px;
+    font-family:'Gowun Dodum', sans-serif;
+    color:var(--ink);
+    resize:vertical;
+  }
+  .grid-paper:focus{ outline:2px solid var(--mint); outline-offset:1px; }
+
+  .submit-btn{
+    background:var(--sky-deep); color:#fff; border:none;
+    padding:12px 22px; border-radius:14px; font-size:16px; font-family:'Jua',sans-serif;
+    margin-top:6px;
+  }
+  .submit-btn:hover{ background:var(--leaf-deep); }
+
+  .entries-head{ display:flex; align-items:baseline; justify-content:space-between; margin:28px 0 12px; }
+  .entries-head h2{ font-size:20px; color:var(--sky-deep); }
+  .entries-count{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft); }
+
+  .entry{
+    background:var(--paper-card);
+    border:2.5px solid var(--ink);
+    border-radius:18px;
+    padding:14px 16px;
+    margin-bottom:14px;
+    display:flex; gap:14px;
+  }
+  .entry-thumb{ width:82px; height:82px; flex-shrink:0; border-radius:12px; border:2px solid var(--line); object-fit:cover; background:#FFFBF9; }
+  .entry-thumb.placeholder{ display:flex; align-items:center; justify-content:center; font-size:26px; color:var(--line); }
+  .entry-body{ flex:1; min-width:0; }
+  .entry-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .entry-title{ font-family:'Jua',sans-serif; font-size:16.5px; margin:0 0 2px; color:var(--ink); }
+  .entry-meta{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); }
+  .entry-weather{ font-size:15px; margin-left:6px; }
+  .entry-hours{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--sky-deep);
+    background:#E7F2FA; padding:3px 9px; border-radius:999px; white-space:nowrap;
+  }
+  .entry-review{ font-size:13.5px; line-height:1.6; color:var(--ink); margin:8px 0 0; white-space:pre-wrap; }
+  .entry-actions{ margin-top:10px; }
+  .entry-actions button{ background:none; border:none; font-size:12px; color:var(--ink-soft); text-decoration:underline; padding:0; }
+  .entry-actions button:hover{ color:var(--danger); }
+
+  .empty{ text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:13.5px; border:2.5px dashed var(--line); border-radius:var(--radius); line-height:1.8; }
+  .empty b{ display:block; font-family:'Jua',sans-serif; font-size:17px; color:var(--sky-deep); margin-bottom:4px; }
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:26px; text-align:center; line-height:1.6; }
+</style>
+</head>
+<body>
+
+  <!-- AUTH / COVER -->
+  <div id="authScreen">
+    <div class="margin-line"></div>
+    <div class="margin-line margin-line-2"></div>
+
+    <svg class="bg-svg" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <!-- sun, top -->
+      <g stroke="#F0B429" stroke-width="3" stroke-linecap="round">
+        <circle cx="430" cy="60" r="46" fill="#FFD873" stroke="#E8A93A"/>
+        <line x1="430" y1="-6" x2="430" y2="-24"/>
+        <line x1="486" y1="16" x2="500" y2="4"/>
+        <line x1="486" y1="104" x2="500" y2="116"/>
+        <line x1="374" y1="16" x2="360" y2="4"/>
+        <path d="M348,44 l-18,6 l16,10 z" fill="#F0B429" stroke="none"/>
+      </g>
+      <!-- heart doodle top-left -->
+      <path d="M60,60 C52,48 34,50 34,66 C34,80 52,92 60,102 C68,92 86,80 86,66 C86,50 68,48 60,60 Z"
+        stroke="#E0687D" stroke-width="3" stroke-linejoin="round"/>
+      <!-- star scribble -->
+      <path d="M64,150 L72,178 L48,160 L82,160 L58,178 Z" stroke="#8FBF6B" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M40,290 L46,310 L28,297 L54,297 L36,310 Z" stroke="#AEC4E8" stroke-width="2" stroke-linejoin="round"/>
+      <!-- small heart mid -->
+      <path d="M112,222 C108,216 98,217 98,226 C98,234 108,240 112,246 C116,240 126,234 126,226 C126,217 116,216 112,222 Z"
+        stroke="#D98A5E" stroke-width="2" stroke-linejoin="round"/>
+      <!-- small rainbow blob top-right -->
+      <path d="M655,130 a20,14 0 1 1 40,0" stroke="#E0687D" stroke-width="4" stroke-linecap="round"/>
+      <path d="M655,134 a20,10 0 1 1 40,0" stroke="#FFD873" stroke-width="4" stroke-linecap="round"/>
+      <path d="M655,138 a20,6 0 1 1 40,0" stroke="#8FBF6B" stroke-width="4" stroke-linecap="round"/>
+      <!-- donut-ish loop doodles down right edge -->
+      <circle cx="700" cy="270" r="20" fill="none" stroke="#4E7D8C" stroke-width="9"/>
+      <circle cx="672" cy="500" r="10" fill="none" stroke="#F0B429" stroke-width="7"/>
+      <path d="M700,20 C692,10 676,12 676,26 C676,38 692,48 700,56 C708,48 724,38 724,26 C724,12 708,10 700,20 Z"
+        stroke="#E0687D" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="712" cy="700" r="18" fill="none" stroke="#C0574F" stroke-width="8"/>
+      <!-- clover / leaf blob left edge -->
+      <ellipse cx="18" cy="830" rx="18" ry="10" fill="none" stroke="#8FBF6B" stroke-width="7" transform="rotate(-20 18 830)"/>
+      <!-- rainbow, bottom-left corner, hand-scribbled -->
+      <g stroke-width="5" stroke-linecap="round" fill="none">
+        <path d="M-30,900 A150,150 0 0 1 220,900" stroke="#E0687D"/>
+        <path d="M-30,908 A160,160 0 0 1 232,908" stroke="#F0B429" opacity="0.9"/>
+        <path d="M-30,916 A170,170 0 0 1 244,916" stroke="#FFD873"/>
+        <path d="M-30,924 A180,180 0 0 1 256,924" stroke="#8FBF6B"/>
+        <path d="M-30,932 A190,190 0 0 1 268,932" stroke="#6FA8DC"/>
+        <path d="M-30,940 A200,200 0 0 1 280,940" stroke="#B39DDB"/>
+      </g>
+      <!-- small cloud + star near rainbow -->
+      <g stroke="#AEC4E8" stroke-width="2.5">
+        <path d="M20,850 a10,10 0 0 1 20,-2 a8,8 0 0 1 14,4 a9,9 0 0 1 -3,17 h-28 a10,10 0 0 1 -3,-19 z" fill="#fff"/>
+      </g>
+      <path d="M56,820 L62,838 L44,826 L70,826 L52,838 Z" stroke="#6FA8DC" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+
+    <div class="auth-card">
+      <div class="hashtag-row">
+        <span>#봉사일기</span><span>#오늘도수고했어</span><span class="sun-emoji">☀️</span>
+      </div>
+      <div class="auth-inner">
+        <h1>나의 봉사 그림일기</h1>
+        <p class="auth-sub">인터넷 · 스마트폰 활동을 기록하는 여름 일기장이에요.<br>이름과 번호 4자리로 나만의 일기장을 열어보세요. 처음이시면 자동으로 새 일기장이 만들어져요.</p>
+        <div class="auth-field">
+          <label for="authName">이름</label>
+          <input id="authName" type="text" placeholder="예: 홍길동" maxlength="16">
+        </div>
+        <div class="auth-field">
+          <label for="authPin">번호 4자리</label>
+          <input id="authPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+        </div>
+        <button class="auth-btn" id="authBtn">일기장 열기</button>
+        <div class="auth-error" id="authError"></div>
+        <div class="profile-chips-wrap" id="profileChipsWrap" style="display:none;">
+          <p class="profile-chips-label">이전에 만든 일기장</p>
+          <div class="profile-chips" id="profileChips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appScreen">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="who">이름 <b id="whoName"></b></div>
+      <button class="logout-btn" id="logoutBtn">다른 분으로 열기</button>
+    </div>
+    <h1 class="title">나의 봉사 그림일기</h1>
+    <p class="sub">오늘의 활동과 소감을 사진과 함께 남겨보세요. 일기를 쓸 때마다 네잎클로버 잎이 하나씩 자라나요.</p>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" id="tabMine" type="button">✍️ 내 일기</button>
+      <button class="tab-btn" id="tabFeed" type="button">📖 모두의 일기</button>
+      <button class="tab-btn" id="tabMission" type="button">🎯 미션</button>
+    </div>
+
+    <div id="myDiaryView">
+    <div class="top-grid">
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="statHours">0</div><div class="stat-label">누적 시간</div></div>
+        <div class="stat"><div class="stat-num" id="statCount">0</div><div class="stat-label">기록 수</div></div>
+        <div class="stat"><div class="stat-num" id="statMonths">0</div><div class="stat-label">함께한 달</div></div>
+      </div>
+      <div class="rings-card">
+        <svg id="ringsSvg" width="150" height="150" viewBox="0 0 150 150"></svg>
+        <div class="cap">네잎클로버 성장판</div>
+      </div>
+    </div>
+
+    <div class="diary-card">
+      <div class="diary-header">
+        <div class="label-cell">
+          <span class="tag">날짜</span>
+          <input id="fDate" type="date">
+        </div>
+        <div class="label-cell">
+          <span class="tag">날씨</span>
+          <div class="weather-picker" id="weatherPicker"></div>
+        </div>
+      </div>
+      <div class="diary-body">
+        <div class="photo-box" id="photoBox">
+          <div class="photo-placeholder" id="photoPlaceholder">
+            <span class="plus">＋</span>
+            사진을 눌러 추가해주세요
+          </div>
+          <img id="photoPreview" style="display:none;">
+          <button class="photo-remove" id="photoRemove" style="display:none;" type="button">✕</button>
+        </div>
+        <input type="file" id="photoInput" accept="image/*">
+
+        <div class="field row2">
+          <div>
+            <label for="fTitle">오늘의 활동 내용</label>
+            <input id="fTitle" type="text" placeholder="예: 카카오톡으로 사진 보내는 법">
+          </div>
+          <div>
+            <label for="fHours">활동 시간</label>
+            <input id="fHours" type="number" min="0" step="0.5" placeholder="예: 2">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fReview">오늘의 소감</label>
+          <textarea class="grid-paper" id="fReview" placeholder="오늘 느끼신 점을 적어주세요"></textarea>
+        </div>
+
+        <button class="submit-btn" id="submitBtn">일기 저장 ☀️</button>
+      </div>
+    </div>
+
+    <div class="entries-head">
+      <h2>지난 페이지들</h2>
+      <span class="entries-count" id="entriesCount"></span>
+    </div>
+    <div id="entriesList"></div>
+    </div>
+
+    <div id="feedView" style="display:none;">
+      <p class="sub" style="margin-top:0;">다른 분들이 남긴 일기를 둘러보시고, 짧은 댓글을 남겨보세요.</p>
+      <div id="feedList"><div class="empty"><b>불러오는 중이에요</b>잠시만 기다려주세요.</div></div>
+    </div>
+
+    <div id="missionView" style="display:none;">
+      <p class="sub" style="margin-top:0;">미션에 도전해보시고, 사진으로 인증해보세요. 인증하시면 다음 미션이 이어져요.</p>
+      <div id="missionCurrent"></div>
+      <div class="entries-head">
+        <h2>완료한 미션</h2>
+        <span class="entries-count" id="missionCount"></span>
+      </div>
+      <div id="missionHistory"></div>
+
+      <div class="entries-head">
+        <h2>다른 분들의 미션 인증</h2>
+        <span class="entries-count" id="missionFeedCount"></span>
+      </div>
+      <div id="missionFeedList"><div class="empty"><b>불러오는 중이에요</b>잠시만 기다려주세요.</div></div>
+    </div>
+
+    <p class="hint">※ 번호 4자리는 같은 링크를 쓰시는 분들끼리 서로 다른 일기장을 구분하기 위한 간단한 장치예요.<br>비밀번호처럼 안전하게 암호화되지는 않으니, 중요한 내용은 적지 않으시는 것을 추천드려요.</p>
+  </div>
+  </div>
+
+<script>
+const WEATHERS = ['☀️','⛅','☁️','🌧️','❄️'];
+let currentUser = null;
+let entries = [];
+let selectedWeather = '';
+let photoDataUrl = null;
+
+const $ = id => document.getElementById(id);
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+/* ---------------- AUTH ---------------- */
+async function loadProfileList(){
+  try{ const res = await window.storage.get('diary-profiles', true); return res && res.value ? JSON.parse(res.value) : []; }
+  catch(e){ return []; }
+}
+async function saveProfileList(list){
+  try{ await window.storage.set('diary-profiles', JSON.stringify(list), true); }
+  catch(e){ console.error('프로필 저장 실패', e); }
+}
+async function renderProfileChips(){
+  const list = await loadProfileList();
+  const wrap = $('profileChipsWrap'); const box = $('profileChips');
+  box.innerHTML = '';
+  if(list.length === 0){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'chip'; chip.type = 'button'; chip.textContent = p.nickname;
+    chip.onclick = () => { $('authName').value = p.nickname; $('authPin').focus(); };
+    box.appendChild(chip);
+  });
+}
+
+$('authBtn').onclick = async () => {
+  const name = $('authName').value.trim();
+  const pin = $('authPin').value.trim();
+  const errEl = $('authError');
+  errEl.textContent = '';
+  if(!name){ errEl.textContent = '이름을 입력해 주세요.'; return; }
+  if(!/^\d{4}$/.test(pin)){ errEl.textContent = '번호 4자리를 숫자로 입력해 주세요.'; return; }
+
+  const list = await loadProfileList();
+  const existing = list.find(p => p.nickname === name);
+  if(existing){
+    if(existing.pin !== pin){ errEl.textContent = '번호가 일치하지 않아요.'; return; }
+  }else{
+    list.push({ nickname: name, pin });
+    await saveProfileList(list);
+  }
+  currentUser = name;
+  await enterApp();
+};
+
+$('logoutBtn').onclick = () => {
+  currentUser = null; entries = [];
+  $('appScreen').style.display = 'none';
+  $('authScreen').style.display = 'flex';
+  $('authName').value = ''; $('authPin').value = ''; $('authError').textContent = '';
+  renderProfileChips();
+};
+
+async function enterApp(){
+  $('authScreen').style.display = 'none';
+  $('appScreen').style.display = 'block';
+  $('whoName').textContent = currentUser;
+  feedLoaded = false;
+  missionLoaded = false;
+  switchTab('mine');
+  await loadEntries();
+}
+
+/* ---------------- WEATHER PICKER ---------------- */
+function renderWeatherPicker(){
+  const el = $('weatherPicker'); el.innerHTML = '';
+  WEATHERS.forEach(w => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'weather-btn' + (selectedWeather === w ? ' on' : '');
+    b.textContent = w;
+    b.onclick = () => { selectedWeather = (selectedWeather === w ? '' : w); renderWeatherPicker(); };
+    el.appendChild(b);
+  });
+}
+renderWeatherPicker();
+
+/* ---------------- PHOTO UPLOAD ---------------- */
+function resizeImage(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > height && width > maxDim){ height = Math.round(height * maxDim/width); width = maxDim; }
+        else if(height > maxDim){ width = Math.round(width * maxDim/height); height = maxDim; }
+        const c = document.createElement('canvas');
+        c.width = width; c.height = height;
+        c.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$('photoBox').onclick = (e) => {
+  if(e.target.id === 'photoRemove') return;
+  $('photoInput').click();
+};
+$('photoInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  photoDataUrl = await resizeImage(file, 640, 0.75);
+  $('photoPreview').src = photoDataUrl;
+  $('photoPreview').style.display = 'block';
+  $('photoPlaceholder').style.display = 'none';
+  $('photoRemove').style.display = 'flex';
+  $('photoBox').classList.add('has-photo');
+};
+$('photoRemove').onclick = (e) => {
+  e.stopPropagation();
+  photoDataUrl = null;
+  $('photoInput').value = '';
+  $('photoPreview').style.display = 'none';
+  $('photoPlaceholder').style.display = 'block';
+  $('photoRemove').style.display = 'none';
+  $('photoBox').classList.remove('has-photo');
+};
+
+/* ---------------- ENTRIES ---------------- */
+async function loadEntries(){
+  try{
+    const res = await window.storage.get('diary-entries:' + currentUser, true);
+    entries = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ entries = []; }
+  render();
+}
+async function saveEntries(){
+  try{ await window.storage.set('diary-entries:' + currentUser, JSON.stringify(entries), true); }
+  catch(e){ console.error('저장 실패', e); }
+}
+function fmtDate(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
+function render(){
+  const sorted = [...entries].sort((a,b) => b.date.localeCompare(a.date));
+  const totalHours = entries.reduce((s,e) => s + Number(e.hours || 0), 0);
+  const months = new Set(entries.map(e => e.date.slice(0,7)));
+
+  $('statHours').textContent = totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1);
+  $('statCount').textContent = entries.length;
+  $('statMonths').textContent = months.size;
+  $('entriesCount').textContent = entries.length ? `${entries.length}건` : '';
+
+  renderClover();
+
+  const list = $('entriesList');
+  list.innerHTML = '';
+  if(sorted.length === 0){
+    list.innerHTML = `<div class="empty"><b>아직 페이지가 없어요</b>첫 봉사를 마쳤다면, 위에 오늘의 사진과 소감을 남겨보세요.</div>`;
+    return;
+  }
+  sorted.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'entry';
+    div.innerHTML = `
+      ${entry.photo ? `<img class="entry-thumb" src="${entry.photo}" alt="그날의 사진">` : `<div class="entry-thumb placeholder">📔</div>`}
+      <div class="entry-body">
+        <div class="entry-top">
+          <div>
+            <p class="entry-title">${escapeHtml(entry.title || '제목 없음')}<span class="entry-weather">${entry.weather || ''}</span></p>
+            <p class="entry-meta">${fmtDate(entry.date)}</p>
+          </div>
+          <span class="entry-hours">${entry.hours}시간</span>
+        </div>
+        ${entry.review ? `<p class="entry-review">${escapeHtml(entry.review)}</p>` : ''}
+        <div class="entry-actions"><button class="del" data-id="${entry.id}">삭제</button></div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.del').forEach(btn => {
+    btn.onclick = async () => {
+      entries = entries.filter(e => e.id !== btn.dataset.id);
+      await saveEntries();
+      render();
+    };
+  });
+}
+
+function leafPath(){
+  // proper heart silhouette, tip at local origin (0,0), lobes extending upward to about y=-45
+  return 'M0,0 C -15,-15 -25,-25 -25,-32.5 C -25,-40 -17.5,-45 -10,-45 C -4,-45 0,-40 0,-35 C 0,-40 4,-45 10,-45 C 17.5,-45 25,-40 25,-32.5 C 25,-25 15,-15 0,0 Z';
+}
+function renderClover(){
+  const svg = $('ringsSvg');
+  const cx = 75, cy = 74;
+  svg.innerHTML = '';
+  const grown = Math.min(entries.length, 4);
+
+  // stem
+  const stem = document.createElementNS('http://www.w3.org/2000/svg','path');
+  stem.setAttribute('d', `M${cx},${cy} C ${cx-4},${cy+18} ${cx+8},${cy+30} ${cx+3},${cy+46}`);
+  stem.setAttribute('fill','none');
+  stem.setAttribute('stroke', grown > 0 ? '#6FA84F' : '#E4DCC8');
+  stem.setAttribute('stroke-width','4');
+  stem.setAttribute('stroke-linecap','round');
+  svg.appendChild(stem);
+
+  const leafColors = ['#8FBF6B','#6FA84F','#5CA890','#4F8F3B'];
+  for(let i=0;i<4;i++){
+    const angle = i * 90;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform', `translate(${cx},${cy}) rotate(${angle})`);
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', leafPath());
+    if(i < grown){
+      p.setAttribute('fill', leafColors[i]);
+      p.setAttribute('stroke', '#3C6E4A');
+      p.setAttribute('stroke-width', '2');
+      p.setAttribute('stroke-linejoin', 'round');
+    }else{
+      p.setAttribute('fill', '#FBF8F0');
+      p.setAttribute('stroke', '#E4DCC8');
+      p.setAttribute('stroke-width', '2');
+      p.setAttribute('stroke-dasharray', '3 4');
+    }
+    g.appendChild(p);
+    svg.appendChild(g);
+  }
+
+  if(grown >= 4){
+    const spark = document.createElementNS('http://www.w3.org/2000/svg','text');
+    spark.setAttribute('x', cx + 30); spark.setAttribute('y', cy - 38);
+    spark.setAttribute('text-anchor','middle');
+    spark.setAttribute('font-size','18');
+    spark.textContent = '✨';
+    svg.appendChild(spark);
+  }
+}
+$('submitBtn').onclick = async () => {
+  const title = $('fTitle').value.trim();
+  const date = $('fDate').value || todayStr();
+  const hours = parseFloat($('fHours').value);
+  const review = $('fReview').value.trim();
+
+  if(!title){ $('fTitle').focus(); return; }
+  if(!hours || hours <= 0){ $('fHours').focus(); return; }
+
+  entries.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    title, date, hours, review,
+    weather: selectedWeather,
+    photo: photoDataUrl,
+    createdAt: Date.now()
+  });
+  await saveEntries();
+
+  $('fTitle').value = ''; $('fHours').value = ''; $('fReview').value = '';
+  selectedWeather = ''; renderWeatherPicker();
+  photoDataUrl = null; $('photoInput').value = '';
+  $('photoPreview').style.display = 'none'; $('photoPlaceholder').style.display = 'block';
+  $('photoRemove').style.display = 'none'; $('photoBox').classList.remove('has-photo');
+  $('fDate').value = todayStr();
+
+  render();
+};
+
+$('fDate').value = todayStr();
+renderProfileChips();
+
+/* ---------------- TABS ---------------- */
+let feedLoaded = false;
+let missionLoaded = false;
+
+$('tabMine').onclick = () => switchTab('mine');
+$('tabFeed').onclick = () => switchTab('feed');
+$('tabMission').onclick = () => switchTab('mission');
+
+function switchTab(which){
+  $('tabMine').classList.toggle('active', which === 'mine');
+  $('tabFeed').classList.toggle('active', which === 'feed');
+  $('tabMission').classList.toggle('active', which === 'mission');
+  $('myDiaryView').style.display = which === 'mine' ? 'block' : 'none';
+  $('feedView').style.display = which === 'feed' ? 'block' : 'none';
+  $('missionView').style.display = which === 'mission' ? 'block' : 'none';
+  if(which === 'feed' && !feedLoaded){
+    feedLoaded = true;
+    loadFeed();
+  }
+  if(which === 'mission' && !missionLoaded){
+    missionLoaded = true;
+    ensureMissions().then(renderMissionTab);
+    loadMissionFeed();
+  }
+}
+
+/* ---------------- FEED (모두의 일기) ---------------- */
+async function loadFeed(){
+  const feedListEl = $('feedList');
+  try{
+    const profiles = await loadProfileList();
+    const results = await Promise.all(profiles.map(async p => {
+      try{
+        const res = await window.storage.get('diary-entries:' + p.nickname, true);
+        const list = res && res.value ? JSON.parse(res.value) : [];
+        return list.map(e => ({ ...e, author: p.nickname }));
+      }catch(e){ return []; }
+    }));
+    const all = results.flat().sort((a,b) => {
+      const byDate = b.date.localeCompare(a.date);
+      if(byDate !== 0) return byDate;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    renderFeed(all);
+  }catch(e){
+    feedListEl.innerHTML = `<div class="empty"><b>불러오지 못했어요</b>잠시 후 다시 시도해 주세요.</div>`;
+  }
+}
+
+function renderFeed(all){
+  const feedListEl = $('feedList');
+  feedListEl.innerHTML = '';
+  if(all.length === 0){
+    feedListEl.innerHTML = `<div class="empty"><b>아직 아무도 일기를 쓰지 않았어요</b>첫 번째 페이지의 주인공이 되어보세요!</div>`;
+    return;
+  }
+  all.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'feed-entry';
+    card.innerHTML = `
+      <div class="feed-author">
+        <div class="avatar">${escapeHtml((entry.author||'?').slice(0,1))}</div>
+        <div class="name">${escapeHtml(entry.author||'익명')}</div>
+      </div>
+      <div class="entry">
+        ${entry.photo ? `<img class="entry-thumb" src="${entry.photo}" alt="그날의 사진">` : `<div class="entry-thumb placeholder">📔</div>`}
+        <div class="entry-body">
+          <div class="entry-top">
+            <div>
+              <p class="entry-title">${escapeHtml(entry.title || '제목 없음')}<span class="entry-weather">${entry.weather || ''}</span></p>
+              <p class="entry-meta">${fmtDate(entry.date)}</p>
+            </div>
+            <span class="entry-hours">${entry.hours}시간</span>
+          </div>
+          ${entry.review ? `<p class="entry-review">${escapeHtml(entry.review)}</p>` : ''}
+        </div>
+      </div>
+      <button class="comments-toggle" data-id="${entry.id}">💬 댓글 보기 · 남기기</button>
+      <div class="comments-box" id="comments-${entry.id}">
+        <div class="comment-list" id="commentList-${entry.id}"></div>
+        <div class="comment-form">
+          <input type="text" id="commentInput-${entry.id}" placeholder="짧은 응원의 말씀을 남겨주세요" maxlength="140">
+          <button data-id="${entry.id}" class="comment-send">보내기</button>
+        </div>
+      </div>
+    `;
+    feedListEl.appendChild(card);
+  });
+
+  feedListEl.querySelectorAll('.comments-toggle').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const box = $('comments-' + id);
+      const isOpen = box.classList.toggle('open');
+      if(isOpen){ await renderComments(id); }
+    };
+  });
+  feedListEl.querySelectorAll('.comment-send').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const input = $('commentInput-' + id);
+      const text = input.value.trim();
+      if(!text) return;
+      await addComment(id, text);
+      input.value = '';
+      await renderComments(id);
+    };
+  });
+}
+
+async function loadComments(entryId){
+  try{
+    const res = await window.storage.get('diary-comments:' + entryId, true);
+    return res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveComments(entryId, list){
+  try{ await window.storage.set('diary-comments:' + entryId, JSON.stringify(list), true); }
+  catch(e){ console.error('댓글 저장 실패', e); }
+}
+async function addComment(entryId, text){
+  const list = await loadComments(entryId);
+  list.push({ author: currentUser, text, createdAt: Date.now() });
+  await saveComments(entryId, list);
+}
+async function renderComments(entryId){
+  const listEl = $('commentList-' + entryId);
+  listEl.innerHTML = '<div class="comment-empty">불러오는 중...</div>';
+  const comments = await loadComments(entryId);
+  if(comments.length === 0){
+    listEl.innerHTML = '<div class="comment-empty">아직 댓글이 없어요. 첫 댓글을 남겨주세요!</div>';
+    return;
+  }
+  listEl.innerHTML = comments.map(c => `
+    <div class="comment-item">
+      <span class="c-name">${escapeHtml(c.author||'익명')}</span>
+      <span class="c-text">${escapeHtml(c.text)}</span>
+    </div>
+  `).join('');
+}
+
+/* ---------------- MISSIONS ---------------- */
+const MISSIONS = [
+  '카카오톡으로 사진 한 장 보내보기',
+  '가족에게 영상통화 걸어보기',
+  '사진 앱에서 오늘 찍은 사진 찾아보기',
+  '카카오톡 이모티콘 하나 보내보기',
+  'QR코드로 메뉴판 열어보기',
+  '은행 앱으로 잔액 확인해보기',
+  '키오스크로 혼자 주문해보기',
+  '오늘 배운 내용을 가족에게 설명해보기',
+  '지도 앱으로 가고 싶은 곳 검색해보기',
+  '문자 메시지에 사진 첨부해서 보내보기',
+  '카카오톡 프로필 사진 바꿔보기',
+  '인터넷으로 날씨 검색해보기',
+  '유튜브에서 좋아하는 노래 찾아 들어보기',
+  '전화번호 새로 저장해보기',
+  '사진 두 손가락으로 확대해서 자세히 보기',
+  '알람 맞춰보기',
+  '다른 분이 남긴 일기에 댓글 남겨보기',
+  '오늘 배운 내용을 한 문장으로 적어보기',
+  '와이파이 연결해보기',
+  '화면 밝기 조절해보기'
+];
+
+let currentMissions = [];
+
+async function loadMissions(){
+  try{
+    const res = await window.storage.get('diary-missions:' + currentUser, true);
+    return res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveMissions(list){
+  try{ await window.storage.set('diary-missions:' + currentUser, JSON.stringify(list), true); }
+  catch(e){ console.error('미션 저장 실패', e); }
+}
+function pickNewMissionText(excludeText){
+  const pool = MISSIONS.filter(m => m !== excludeText);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function getActiveMission(list){
+  return list.length && !list[list.length - 1].completedAt ? list[list.length - 1] : null;
+}
+
+async function ensureMissions(){
+  currentMissions = await loadMissions();
+  if(getActiveMission(currentMissions) === null){
+    const last = currentMissions.length ? currentMissions[currentMissions.length - 1].text : null;
+    currentMissions.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      text: pickNewMissionText(last),
+      assignedAt: Date.now(),
+      completedAt: null
+    });
+    await saveMissions(currentMissions);
+  }
+}
+
+let missionPhotoDataUrl = null;
+
+function renderMissionTab(){
+  const active = getActiveMission(currentMissions);
+  const curEl = $('missionCurrent');
+  curEl.innerHTML = active ? `
+    <div class="mission-card">
+      <span class="mtag">진행 중인 미션</span>
+      <p class="mtext">${escapeHtml(active.text)}</p>
+      <p class="mdate">${fmtDate(new Date(active.assignedAt).toISOString().slice(0,10))}부터</p>
+      <div class="photo-box" id="missionPhotoBox">
+        <div class="photo-placeholder" id="missionPhotoPlaceholder">
+          <span class="plus">📸</span>
+          인증 사진을 눌러 추가해주세요
+        </div>
+        <img id="missionPhotoPreview" style="display:none;">
+        <button class="photo-remove" id="missionPhotoRemove" style="display:none;" type="button">✕</button>
+      </div>
+      <input type="file" id="missionPhotoInput" accept="image/*" style="display:none;">
+      <button class="submit-btn" id="missionVerifyBtn">미션 인증하기 ✅</button>
+      <p class="mission-verify-hint" id="missionVerifyHint"></p>
+    </div>
+  ` : `<div class="empty"><b>아직 미션이 없어요</b>미션 탭을 열면 새 미션이 시작돼요.</div>`;
+
+  if(active){
+    missionPhotoDataUrl = null;
+    const box = $('missionPhotoBox');
+    const input = $('missionPhotoInput');
+    box.onclick = (e) => { if(e.target.id !== 'missionPhotoRemove') input.click(); };
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      missionPhotoDataUrl = await resizeImage(file, 640, 0.75);
+      $('missionPhotoPreview').src = missionPhotoDataUrl;
+      $('missionPhotoPreview').style.display = 'block';
+      $('missionPhotoPlaceholder').style.display = 'none';
+      $('missionPhotoRemove').style.display = 'flex';
+      box.classList.add('has-photo');
+    };
+    $('missionPhotoRemove').onclick = (e) => {
+      e.stopPropagation();
+      missionPhotoDataUrl = null;
+      input.value = '';
+      $('missionPhotoPreview').style.display = 'none';
+      $('missionPhotoPlaceholder').style.display = 'block';
+      $('missionPhotoRemove').style.display = 'none';
+      box.classList.remove('has-photo');
+    };
+    $('missionVerifyBtn').onclick = async () => {
+      if(!missionPhotoDataUrl){
+        $('missionVerifyHint').textContent = '인증 사진을 먼저 추가해 주세요.';
+        return;
+      }
+      await verifyCurrentMission(missionPhotoDataUrl);
+    };
+  }
+
+  const done = currentMissions.filter(m => m.completedAt).slice().reverse();
+  $('missionCount').textContent = done.length ? `${done.length}개` : '';
+  const histEl = $('missionHistory');
+  if(done.length === 0){
+    histEl.innerHTML = `<div class="empty"><b>아직 완료한 미션이 없어요</b>사진으로 인증하면 미션이 하나씩 쌓여요.</div>`;
+    return;
+  }
+  histEl.innerHTML = done.map(m => `
+    <div class="mission-history-item">
+      ${m.photo ? `<img class="entry-thumb" src="${m.photo}" alt="인증 사진">` : `<span class="check">✅</span>`}
+      <div>
+        <div class="mh-text">${escapeHtml(m.text)}</div>
+        <div class="mh-date">${fmtDate(new Date(m.completedAt).toISOString().slice(0,10))} 인증 완료</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function verifyCurrentMission(photo){
+  const active = getActiveMission(currentMissions);
+  if(active){
+    active.completedAt = Date.now();
+    active.photo = photo;
+  }
+  const lastText = active ? active.text : (currentMissions.length ? currentMissions[currentMissions.length-1].text : null);
+  currentMissions.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    text: pickNewMissionText(lastText),
+    assignedAt: Date.now(),
+    completedAt: null
+  });
+  await saveMissions(currentMissions);
+  renderMissionTab();
+  loadMissionFeed();
+}
+
+/* ---------------- 다른 분들의 미션 인증 (shared) ---------------- */
+async function loadMissionFeed(){
+  const el = $('missionFeedList');
+  try{
+    const profiles = await loadProfileList();
+    const results = await Promise.all(profiles.map(async p => {
+      try{
+        const res = await window.storage.get('diary-missions:' + p.nickname, true);
+        const list = res && res.value ? JSON.parse(res.value) : [];
+        return list.filter(m => m.completedAt).map(m => ({ ...m, author: p.nickname }));
+      }catch(e){ return []; }
+    }));
+    const all = results.flat().sort((a,b) => (b.completedAt||0) - (a.completedAt||0));
+    renderMissionFeed(all);
+  }catch(e){
+    el.innerHTML = `<div class="empty"><b>불러오지 못했어요</b>잠시 후 다시 시도해 주세요.</div>`;
+  }
+}
+
+function renderMissionFeed(all){
+  const el = $('missionFeedList');
+  $('missionFeedCount').textContent = all.length ? `${all.length}개` : '';
+  if(all.length === 0){
+    el.innerHTML = `<div class="empty"><b>아직 인증하신 분이 없어요</b>가장 먼저 미션을 인증해보세요!</div>`;
+    return;
+  }
+  el.innerHTML = all.map(m => `
+    <div class="mission-history-item">
+      ${m.photo ? `<img class="entry-thumb" src="${m.photo}" alt="인증 사진">` : `<span class="check">✅</span>`}
+      <div>
+        <div class="mh-name">${escapeHtml(m.author||'익명')}</div>
+        <div class="mh-text">${escapeHtml(m.text)}</div>
+        <div class="mh-date">${fmtDate(new Date(m.completedAt).toISOString().slice(0,10))} 인증 완료</div>
+      </div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
